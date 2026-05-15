@@ -28,6 +28,18 @@ from tools.places_tool import places_search_tool
 from tools.weather_tool import weather_tool
 from tools.budget_tool import budget_tool
 
+def extract_first_price(text):
+    """
+    This function looks through text and tries to find the first price value.
+
+    We use it to extract flight and hotel prices from tool outputs.
+    """
+    price_match = re.search(r"Rs\.(\d+)", text)
+
+    if price_match:
+        return int(price_match.group(1))
+
+    return None
 
 def extract_trip_details(user_query):
     """
@@ -124,17 +136,26 @@ def run_travel_agent(user_query):
         places_result = places_search_tool.run(destination)
         weather_result = weather_tool.run(destination)
 
+               # -------------------------------------------------------
+        # Extract real values from the tool outputs
+        # If a price is not found, we keep a simple fallback
         # -------------------------------------------------------
-        # For now we use simple sample values for budget
-        # Later we can improve this by extracting exact values
-        # from the tool outputs automatically
-        # -------------------------------------------------------
-        sample_flight_price = 5000
-        sample_hotel_price = 3500
-        sample_daily_expense = 1000
+        flight_price = extract_first_price(flight_result)
+        hotel_price = extract_first_price(hotel_result)
 
+        if flight_price is None:
+            flight_price = 5000
+
+        if hotel_price is None:
+            hotel_price = 3500
+
+        daily_expense = 1000
+
+        # -------------------------------------------------------
+        # Send extracted values to the budget tool
+        # -------------------------------------------------------
         budget_result = budget_tool.run(
-            f"{sample_flight_price}, {sample_hotel_price}, {days}, {sample_daily_expense}"
+            f"{flight_price}, {hotel_price}, {days}, {daily_expense}"
         )
 
         # -------------------------------------------------------
