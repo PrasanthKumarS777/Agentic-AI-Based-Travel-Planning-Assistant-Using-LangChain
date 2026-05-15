@@ -19,7 +19,14 @@ from langchain.tools import tool
 # -------------------------------------------------------
 DATA_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "flights_cleaned.json")
 
-
+def format_duration(minutes):
+    hours, mins = divmod(int(minutes), 60)
+    if hours and mins:
+        return f"{hours}h {mins}m"
+    if hours:
+        return f"{hours}h"
+    return f"{mins}m"
+    
 def load_flights():
     """
     Load cleaned flight records from flights_cleaned.json.
