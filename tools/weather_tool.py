@@ -4,6 +4,8 @@
 #
 # We first convert city name into latitude and longitude.
 # Then we call the weather forecast API.
+# Finally, we convert weather codes into simple labels
+# so the output is easier to understand.
 # -------------------------------------------------------
 
 import requests
@@ -11,8 +13,7 @@ import requests
 from langchain.tools import tool
 
 # -------------------------------------------------------
-# A small city coordinate map for our project
-# This keeps the code simple and avoids extra API calls
+# City coordinates for our project
 # -------------------------------------------------------
 CITY_COORDINATES = {
     "delhi": {"latitude": 28.6139, "longitude": 77.2090},
@@ -29,10 +30,41 @@ CITY_COORDINATES = {
 
 def get_coordinates(city_name):
     """
-    Get latitude and longitude for a city from the local map.
+    Get latitude and longitude for a city.
     """
     key = city_name.strip().lower()
     return CITY_COORDINATES.get(key)
+
+
+def weather_code_to_text(code):
+    """
+    Convert Open-Meteo weather codes into easy words.
+    """
+    weather_map = {
+        0: "Clear sky",
+        1: "Mainly clear",
+        2: "Partly cloudy",
+        3: "Overcast",
+        45: "Fog",
+        48: "Depositing rime fog",
+        51: "Light drizzle",
+        53: "Moderate drizzle",
+        55: "Dense drizzle",
+        61: "Slight rain",
+        63: "Moderate rain",
+        65: "Heavy rain",
+        71: "Slight snow",
+        73: "Moderate snow",
+        75: "Heavy snow",
+        80: "Rain showers",
+        81: "Moderate rain showers",
+        82: "Violent rain showers",
+        95: "Thunderstorm",
+        96: "Thunderstorm with hail",
+        99: "Thunderstorm with heavy hail",
+    }
+
+    return weather_map.get(code, f"Unknown weather code ({code})")
 
 
 @tool
@@ -63,7 +95,6 @@ def weather_tool(query: str) -> str:
 
         # -------------------------------------------------------
         # Build the Open-Meteo forecast URL
-        # We ask for daily max/min temperature and weather code
         # -------------------------------------------------------
         url = (
             "https://api.open-meteo.com/v1/forecast"
@@ -81,7 +112,7 @@ def weather_tool(query: str) -> str:
         data = response.json()
 
         # -------------------------------------------------------
-        # Read weather information from the response
+        # Read daily forecast values
         # -------------------------------------------------------
         daily = data.get("daily", {})
         dates = daily.get("time", [])
@@ -93,16 +124,19 @@ def weather_tool(query: str) -> str:
             return f"No weather data found for {city_name.title()}."
 
         # -------------------------------------------------------
-        # Build a simple readable forecast summary
+        # Build readable forecast
         # -------------------------------------------------------
         result = f"Weather forecast for {city_name.title()}:\n\n"
 
         for i in range(min(3, len(dates))):
+            code = weather_codes[i]
+            weather_text = weather_code_to_text(code)
+
             result += f"Day {i + 1}:\n"
             result += f"  Date        : {dates[i]}\n"
             result += f"  Max Temp    : {max_temps[i]}°C\n"
             result += f"  Min Temp    : {min_temps[i]}°C\n"
-            result += f"  Weather Code: {weather_codes[i]}\n\n"
+            result += f"  Weather     : {weather_text}\n\n"
 
         return result
 
